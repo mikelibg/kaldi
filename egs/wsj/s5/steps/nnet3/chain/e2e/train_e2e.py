@@ -341,7 +341,7 @@ def train(args, run_opts):
                     --frames-per-iter {frames_per_iter} \
                     --srand {srand} \
                     {data} {dir} {fst_dir} {egs_dir}""".format(
-                        command=run_opts.command,
+                        command=run_opts.egs_command,
                         cmvn_opts=args.cmvn_opts if args.cmvn_opts is not None else '',
                         ivector_dir=(args.online_ivector_dir
                                      if args.online_ivector_dir is not None
@@ -514,7 +514,7 @@ def train(args, run_opts):
         chain_lib.combine_models(
             dir=args.dir, num_iters=num_iters,
             models_to_combine=models_to_combine,
-            num_chunk_per_minibatch_str=args.num_chunk_per_minibatch,
+            num_chunk_per_minibatch_str="1:64",
             egs_dir=egs_dir,
             leaky_hmm_coefficient=args.leaky_hmm_coefficient,
             l2_regularize=args.l2_regularize,

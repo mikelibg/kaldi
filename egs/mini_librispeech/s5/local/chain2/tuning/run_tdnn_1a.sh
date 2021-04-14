@@ -148,11 +148,7 @@ if [ $stage -le 12 ]; then
   # This will be a two-level tree (with the smaller number of leaves specified
   # by the '--num-clusters' option); this is needed by the adaptation framework
   # search below for 'tree.map'
-   if [ -f $tree_dir/final.mdl ]; then
-     echo "$0: $tree_dir/final.mdl already exists, refusing to overwrite it."
-     exit 1;
-  fi
-   steps/nnet3/chain/build_tree.sh \
+  steps/nnet3/chain/build_tree.sh \
      --frame-subsampling-factor ${frame_subsampling_factor} \
      --context-opts "--context-width=2 --central-position=1" \
      --cmd "$train_cmd" 3500 ${lores_train_data_dir} \
@@ -200,16 +196,17 @@ if [ $stage -le 14 ]; then
   output-layer name=output-default-xent input=prefinal-xent dim=$num_leaves learning-rate-factor=$learning_rate_factor max-change=1.5
 EOF
   steps/nnet3/xconfig_to_configs.py --xconfig-file $dir/configs/default.xconfig --config-dir $dir/configs/
-  if [ $dir/init/default_trans.mdl ]; then # checking this because it may have been copied in a previous run of the same script
-      copy-transition-model $tree_dir/final.mdl $dir/init/default_trans.mdl  || exit 1 &
-  else
-      echo "Keeping the old $dir/init/default_trans.mdl as it already exists."
-  fi
 fi
 wait;
 
 init_info=$dir/init/info.txt
 if [ $stage -le 15 ]; then
+
+  if [ ! -f $dir/init/default_trans.mdl ]; then # checking this because it may have been copied in a previous run of the same script
+      copy-transition-model $tree_dir/final.mdl $dir/init/default_trans.mdl  || exit 1 &
+  else
+      echo "Keeping the old $dir/init/default_trans.mdl as it already exists."
+  fi
 
   if [ ! -f $dir/configs/ref.raw ]; then
       echo "Expected $dir/configs/ref.raw to exist"
@@ -328,11 +325,11 @@ fi
 if [ $stage -le 22 ]; then
   echo "$0: about to train model"
   steps/chain2/train.sh \
-    --stage $train_stage --cmd "$cuda_cmd" \
+    --stage $train_stage --cmd "$train_cmd" \
     --xent-regularize $xent_regularize --leaky-hmm-coefficient 0.1 \
     --max-param-change 2.0 \
     --num-jobs-initial 2 --num-jobs-final 5 \
-    --groups-per-minibatch 256,128,64 \
+    --minibatch-size 256,128,64 \
      $dir/egs $dir || exit 1;
 fi
 

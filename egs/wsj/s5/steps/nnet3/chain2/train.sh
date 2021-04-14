@@ -110,8 +110,7 @@ if [ $stage -le -2 ]; then
 fi
 
 
-# won't work at Idiap
-#if [ "$use_gpu" != "no" ]; then gpu_cmd_opt="--gpu 1"; else gpu_cmd_opt=""; fi
+if [ "$use_gpu" != "no" ]; then gpu_cmd_opt="--gpu 1"; else gpu_cmd_opt=""; fi
 
 num_iters=$(wc -l <$dir/schedule.txt)
 
@@ -131,7 +130,7 @@ if [ $stage -le -1 ]; then
   if [ $num_langs -eq 1 ]; then
       echo "$0: Num langs is 1"
       cp $dir/init/default.raw $dir/0.raw
-      if [ -f $dir/init/default_trans.mdl ]; then
+      if [ ! -f $dir/init/default_trans.mdl ]; then
           cp $dir/init/default_trans.mdl $dir/0_trans.mdl 
       fi
   else
@@ -191,7 +190,12 @@ while [ $x -lt $num_iters ]; do
            "nnet3-copy --learning-rate=$lrate $dir/${x}.raw - |" $den_fst_dir \
            "ark:nnet3-chain-copy-egs $egs_opts scp:$egs_dir/${name}_subset.scp ark:- | nnet3-chain-merge-egs $multilingual_eg_opts --minibatch-size=1:64 ark:- ark:-|" \
            $dir/${next_x}_${name}.mdl || touch $dir/.error_diagnostic &
+
+       # Make sure we do not run more than $num_jobs_final at once
+       [ $num_jobs_final -eq 1 ] && wait
+
     done
+    wait
   fi
 
   if [ $x -gt 0 ]; then
@@ -311,7 +315,7 @@ if [ $stage -le $num_iters ]; then
    fi
 fi
 
-if [ ! -f $dir/final.mdl ]; then
+if [[ ! $multilingual_eg ]] && [[ ! -f $dir/final.mdl ]]; then
   echo "$0: $dir/final.mdl does not exist."
   # we don't want to clean up if the training didn't succeed.
   exit 1;
